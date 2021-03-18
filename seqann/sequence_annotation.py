@@ -187,6 +187,7 @@ class BioSeqAnn(Model):
                                    verbosity=seqsearch_verbosity)
 
     def annotate(self, sequence: Seq=None, locus: str=None,
+                 allele: str=None,
                  nseqs: int=20, alignseqs: int=10,
                  skip: List=[],
                  rerun: bool=True,
@@ -198,6 +199,8 @@ class BioSeqAnn(Model):
         :type sequence: Seq
         :param locus: The gene locus associated with the sequence.
         :type locus: ``str``
+        :param allele: The allele used to help speed up alignment.
+        :type allele: ``str``
         :param nseqs: The number of blast sequences to use.
         :type nseqs: ``int``
         :param alignseqs: The number of sequences to use for targeted alignments.
@@ -282,8 +285,20 @@ class BioSeqAnn(Model):
                 #raise NoLocusException("")
                 return
 
-        # Exact match found
-        matched_annotation = self.refdata.search_refdata(sequence, locus)
+        if allele:
+            matched_annotation = self.refdata.align_allele_sequence(sequence, allele)
+            # if create_gfe:
+            #     feats, gfe = self.gfe.get_gfe(matched_annotation, locus)
+            #     matched_annotation.gfe = gfe
+            #     matched_annotation.structure = feats
+            if matched_annotation or True:
+                return matched_annotation
+            else:
+                print("Failed alignment with", allele)
+        else:
+            # Exact match found
+            matched_annotation = self.refdata.search_refdata(sequence, locus)
+
         if matched_annotation and not skip:
 
             matched_annotation.exact = True

@@ -22,11 +22,14 @@
 #    > http://www.opensource.org/licenses/lgpl-license.php
 #
 import re
+import regex
 import os
 import string
 import random as r
+import requests
+import json
 
-
+from collections import OrderedDict
 from datetime import datetime, date
 from six import integer_types, iteritems
 from Bio.SeqFeature import SeqFeature
@@ -170,6 +173,102 @@ def get_features(seqrecord):
     annotation = {k[0]: k[1] for k in feat_list}
     return(annotation)
 
+def get_allele_features(sequence, seqrecord):
+    """
+    Obtains allele features from allele based on similarity
+    to a provided seqrecord from the reference data (hlaref variable).
+    """
+    ref_seq = str(seqrecord.seq)
+    m = regex.search('(%s){s<=10}' % (str(sequence.seq)), 
+    # m = regex.search('(%s){e<=20}' % (str(sequence.seq)), 
+                        ref_seq)
+    if not m:
+        return None
+    seq_start, seq_end = m.span(0)
+    subs, inserts, deletes = m.fuzzy_changes
+    if inserts and inserts[0] == seq_start:
+        inserts.pop(0)
+        seq_start += 1
+    # print("fuzzy changes", subs, inserts, deletes)
+    shift = 0
+    features = OrderedDict()
+    # print('a', ref_seq[seq_start:seq_end])
+    # print('b', str(sequence.seq))
+    for i, feature in enumerate(seqrecord.features):
+        if feature.type not in ['UTR', 'exon', 'intron']:
+            continue
+        feat_loc = feature.location
+        feat_inserts = [insert 
+                        for insert in inserts
+                        if feat_loc._start <= insert and insert < feat_loc._end]
+        feat_deletes = [delete 
+                        for delete in deletes
+                        if feat_loc._start <= delete and delete < feat_loc._end]
+        current_shift = len(feat_deletes) - len(feat_inserts)
+        # if feat_inserts:
+        #     shift -= len(feat_inserts)
+        # if feat_deletes:
+        #     shift += len(feat_deletes)
+        shift += current_shift
+        feat_start = feat_loc._start + shift
+        feat_end = feat_loc._end + shift
+        # print(seq_start, seq_end, feat_loc._start, feat_loc._end, current_shift, shift)
+        if ((seq_start <= feat_start and feat_start < seq_end) or
+            (seq_start < feat_end  and feat_end < seq_end)):
+                if feat_start < seq_start and seq_start < feat_end:
+                    feat_align = sequence[:feat_end - seq_start]
+                    feat_ref = ref_seq[seq_start:feat_end]
+                    # print('start')
+                elif feat_start < seq_end and seq_end < feat_end:
+                    feat_align = sequence[-(seq_end - (feat_start)):]
+                    feat_ref = ref_seq[feat_start:seq_end]
+                    # print('end')
+                else:
+                    # print('middle')
+                    feat_align = sequence[feat_start - seq_start:
+                                          feat_end   - seq_start]
+                    feat_ref = ref_seq[feat_start:feat_end]
+                # feat_inserts = [insert 
+                #                 for insert in inserts
+                #                 if feat_loc._start <= insert and insert < feat_loc._end]
+                # feat_deletes = [delete 
+                #                 for delete in deletes
+                #                 if feat_loc._start <= delete and delete < feat_loc._end]
+                # if feat_inserts:
+                #     shift -= len(feat_inserts)
+                # if feat_deletes:
+                #     shift += len(feat_deletes)
+                suffix = (feature.qualifiers['number'][0] 
+                            if 'number' in feature.qualifiers else '')
+                if not suffix:
+                    prefix = 'three_prime' if i == len(seqrecord.features) - 1 \
+                        else 'five_prime'
+                else:
+                    prefix = ''
+                name_parts = [prefix, feature.type, suffix]
+                feature_name = '_'.join([part for part in name_parts if part])
+                features[feature_name] = feat_align
+    return features
+
+def get_high_res_alleles(allele : str):
+    """
+    Obtains list of high resolution alleles given an allele name.
+    :param allele: allele string
+
+    :return: List of potential high resolution alleles
+    :rtype: list[str]
+    """
+    url = "https://hml.nmdp.org/mac/api/expand?typing="
+    if '/' in allele:
+        return allele.split('/')
+    try:
+        print("Using endpoint")
+        response = requests.get(url + allele)
+        data = json.loads(response.content)
+        expanded_list = [result['expanded'].replace('HLA-','') for result in data]
+        return [allele for allele in expanded_list if allele]
+    except Exception as e:
+        return [allele]
 
 def randomid(N=12):
     random_id = ''.join(r.choices(string.ascii_uppercase + string.digits,

@@ -41,6 +41,8 @@ from BioSQL import BioSeqDatabase
 from Bio.SeqRecord import SeqRecord
 
 from seqann.util import get_features
+from seqann.util import get_high_res_alleles
+from seqann.util import get_allele_features
 from seqann.util import deserialize_model
 from seqann.models.base_model_ import Model
 from seqann.models.annotation import Annotation
@@ -677,6 +679,44 @@ class ReferenceData(Model):
                                           locus)
             else:
                 return
+
+    def format_allele(self, allele : str):
+        """
+        Appends an HLA- prefix if not present in allele.
+
+        :return: Allele name with HLA- prefix.
+        :rtype: str
+        """
+        prefix = 'HLA-'
+        if prefix not in allele:
+            allele = prefix + allele
+        return allele
+
+    def align_allele_sequence(self, sequence, allele):
+        alleles = []
+        allele = self.format_allele(allele)
+        if '/' in allele:
+            alleles = allele.split('/')
+        elif allele not in self.hlaref:
+            for ref_allele in self.hlaref.keys():
+                if allele.replace('G', '') in ref_allele:
+                    alleles.append(ref_allele)
+        if not alleles:
+            alleles = get_high_res_alleles(allele) if allele not in self.hlaref else [allele]
+        # print("alleles", alleles)
+        for allele in alleles:
+            allele = self.format_allele(allele)
+            if allele in self.hlaref:
+                annotated_features = get_allele_features(sequence, 
+                                        self.hlaref[allele])
+                if annotated_features:
+                    annotation = Annotation(annotation=annotated_features,
+                                            method='target_allele')
+                    print("annotation found with", allele)
+                    return annotation
+                # else:
+                #     print(allele, "'s sequence not found")
+        return None
 
     # def refseqs(self, locus, n):
     #     hla, loc = locus.split('-')
