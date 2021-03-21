@@ -291,10 +291,8 @@ class BioSeqAnn(Model):
             #     feats, gfe = self.gfe.get_gfe(matched_annotation, locus)
             #     matched_annotation.gfe = gfe
             #     matched_annotation.structure = feats
-            if matched_annotation or True:
+            if matched_annotation:
                 return matched_annotation
-            else:
-                print("Failed alignment with", allele)
         else:
             # Exact match found
             matched_annotation = self.refdata.search_refdata(sequence, locus)
