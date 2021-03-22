@@ -704,18 +704,19 @@ class ReferenceData(Model):
         if not alleles:
             alleles = get_high_res_alleles(allele) if allele not in self.hlaref else [allele]
         # print("alleles", alleles)
-        for allele in alleles:
-            allele = self.format_allele(allele)
-            if allele in self.hlaref:
-                annotated_features = get_allele_features(sequence, 
-                                        self.hlaref[allele])
-                if annotated_features:
-                    annotation = Annotation(annotation=annotated_features,
-                                            method='target_allele')
-                    print("annotation found with", allele)
-                    return annotation
-                # else:
-                #     print(allele, "'s sequence not found")
+        for lenience in [4, 7]:
+            for allele in alleles:
+                allele = self.format_allele(allele)
+                if allele in self.hlaref:
+                    annotated_features = get_allele_features(sequence, 
+                                            self.hlaref[allele], lenience=lenience)
+                    if annotated_features:
+                        annotation = Annotation(annotation=annotated_features,
+                                                method='target_allele')
+                        print("annotation found with", allele)
+                        return annotation
+                    # else:
+                    #     print(allele, "'s sequence not found")
         return None
 
     # def refseqs(self, locus, n):

@@ -173,20 +173,19 @@ def get_features(seqrecord):
     annotation = {k[0]: k[1] for k in feat_list}
     return(annotation)
 
-def get_allele_features(sequence, seqrecord):
+def get_allele_features(sequence, seqrecord, lenience=4):
     """
     Obtains allele features from allele based on similarity
     to a provided seqrecord from the reference data (hlaref variable).
     """
     ref_seq = str(seqrecord.seq)
-    m = regex.search('(%s){s<=10}' % (str(sequence.seq)), 
-    # m = regex.search('(%s){e<=20}' % (str(sequence.seq)), 
+    m = regex.search('(%s){e<%s}' % (str(sequence.seq), lenience), 
                         ref_seq)
     if not m:
         return None
     seq_start, seq_end = m.span(0)
     subs, inserts, deletes = m.fuzzy_changes
-    if inserts and inserts[0] == seq_start:
+    while inserts and (seq_start <= inserts[0] and inserts[0] < seq_start + 10):
         inserts.pop(0)
         seq_start += 1
     # print("fuzzy changes", subs, inserts, deletes)
