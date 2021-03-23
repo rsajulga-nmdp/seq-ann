@@ -291,7 +291,7 @@ class BioSeqAnn(Model):
             #     feats, gfe = self.gfe.get_gfe(matched_annotation, locus)
             #     matched_annotation.gfe = gfe
             #     matched_annotation.structure = feats
-            if matched_annotation:
+            if matched_annotation or True:
                 return matched_annotation
         else:
             # Exact match found

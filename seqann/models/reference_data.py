@@ -713,7 +713,6 @@ class ReferenceData(Model):
                     if annotated_features:
                         annotation = Annotation(annotation=annotated_features,
                                                 method='target_allele')
-                        print("annotation found with", allele)
                         return annotation
                     # else:
                     #     print(allele, "'s sequence not found")
