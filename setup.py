@@ -44,7 +44,7 @@ test_requirements = [
 
 setup(
     name='seq-ann',
-    version='1.1.0',
+    version='1.2.0',
     description="Sequence Annotation",
     long_description=readme,
     author="NMDP Bioinformatics, CIBMTR",
